@@ -1,0 +1,196 @@
+{% extends 'base.html' %}
+{% block title %}{{ page_title }} — Studforge{% endblock %}
+{% block page_title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+
+<div class="breadcrumb">
+  <a href="{{ url_for('auftraege_list') }}">Aufträge</a>
+  {% if order %}
+  <i class="fa-solid fa-chevron-right"></i>
+  <a href="{{ url_for('auftraege_detail', id=order.id) }}">{{ order.order_number or order.title }}</a>
+  {% endif %}
+  <i class="fa-solid fa-chevron-right"></i>
+  <span>{{ page_title }}</span>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <span class="card-title">
+      <i class="fa-solid fa-layer-group"></i>
+      {{ page_title }}
+    </span>
+  </div>
+  <div class="card-body">
+    <form method="post">
+
+      <!-- Section: Grunddaten -->
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--text-dim);margin-bottom:14px;">
+        <i class="fa-solid fa-circle-info" style="margin-right:6px;color:var(--accent);"></i>Grunddaten
+      </div>
+      <div class="form-grid">
+
+        <div class="form-group col-span-2">
+          <label class="form-label">Titel / Bezeichnung *</label>
+          <input type="text" name="title" value="{{ order.title if order else '' }}"
+                 placeholder="z. B. Roboter-Halterung × 3, Schlüsselanhänger Logo …" required autofocus>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Kunde</label>
+          <select name="customer_id">
+            <option value="">— Ohne Kundenzuordnung —</option>
+            {% for c in customers %}
+            <option value="{{ c.id }}"
+              {% if order and order.customer_id == c.id %}selected
+              {% elif request.args.get('customer_id') == c.id|string %}selected{% endif %}>
+              {{ c.name }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Status</label>
+          <select name="status">
+            {% for key, info in STATUSES.items() %}
+            <option value="{{ key }}" {% if order and order.status == key %}selected{% elif not order and key == 'anfrage' %}selected{% endif %}>
+              {{ info.label }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-group col-span-2">
+          <label class="form-label">Beschreibung / Kundenwunsch</label>
+          <textarea name="description" placeholder="Was möchte der Kunde drucken? Besonderheiten, Anforderungen …">{{ order.description if order else '' }}</textarea>
+        </div>
+
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- Section: Druckdetails -->
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--text-dim);margin-bottom:14px;">
+        <i class="fa-solid fa-print" style="margin-right:6px;color:var(--accent);"></i>Druckdetails
+      </div>
+      <div class="form-grid cols-3">
+
+        <div class="form-group">
+          <label class="form-label">Material</label>
+          <select name="material">
+            <option value="">— Material wählen —</option>
+            {% for mat in MATERIALS %}
+            <option value="{{ mat }}" {% if order and order.material == mat %}selected{% endif %}>{{ mat }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Farbe</label>
+          <input type="text" name="color" value="{{ order.color if order else '' }}"
+                 placeholder="z. B. Weiß, Schwarz, Transparent …">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Dateiname / Modell</label>
+          <input type="text" name="file_name" value="{{ order.file_name if order else '' }}"
+                 placeholder="z. B. halterung_v2.stl">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Schichthöhe</label>
+          <input type="text" name="layer_height" value="{{ order.layer_height if order else '' }}"
+                 placeholder="z. B. 0.05 mm, 0.2 mm …">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Infill</label>
+          <input type="text" name="infill" value="{{ order.infill if order else '' }}"
+                 placeholder="z. B. 15%, 40%, 100% …">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Stützstrukturen</label>
+          <select name="supports">
+            <option value="" {% if not order or not order.supports %}selected{% endif %}>—</option>
+            <option value="Ja" {% if order and order.supports == 'Ja' %}selected{% endif %}>Ja</option>
+            <option value="Nein" {% if order and order.supports == 'Nein' %}selected{% endif %}>Nein</option>
+            <option value="Automatisch" {% if order and order.supports == 'Automatisch' %}selected{% endif %}>Automatisch</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Menge</label>
+          <input type="number" name="quantity" value="{{ order.quantity if order else 1 }}"
+                 min="1" placeholder="1">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Lieferdatum</label>
+          <input type="date" name="due_date" value="{{ order.due_date if order and order.due_date else '' }}">
+        </div>
+
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- Section: Preis -->
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--text-dim);margin-bottom:14px;">
+        <i class="fa-solid fa-euro-sign" style="margin-right:6px;color:var(--accent);"></i>Preis
+      </div>
+      <div class="form-grid">
+
+        <div class="form-group">
+          <label class="form-label">Schätzpreis (€)</label>
+          <input type="number" name="estimated_price"
+                 value="{{ order.estimated_price if order else '' }}"
+                 placeholder="0.00" step="0.01" min="0">
+          <span class="form-hint">Erste Kostenschätzung für den Kunden</span>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Endpreis (€)</label>
+          <input type="number" name="final_price"
+                 value="{{ order.final_price if order else '' }}"
+                 placeholder="0.00" step="0.01" min="0">
+          <span class="form-hint">Finaler Preis nach Fertigstellung</span>
+        </div>
+
+        {% if order %}
+        <div class="form-group col-span-2">
+          <label class="checkbox-wrap">
+            <input type="checkbox" name="paid" {% if order.paid %}checked{% endif %}>
+            <span class="checkbox-label"><i class="fa-solid fa-circle-check" style="color:var(--success);margin-right:6px;"></i>Auftrag ist bezahlt</span>
+          </label>
+        </div>
+        {% endif %}
+
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- Section: Notizen -->
+      <div class="form-group mb-5">
+        <label class="form-label">
+          <i class="fa-solid fa-note-sticky" style="margin-right:6px;color:var(--accent);"></i>Interne Notizen
+        </label>
+        <textarea name="notes" placeholder="Interne Anmerkungen, besondere Hinweise …">{{ order.notes if order else '' }}</textarea>
+      </div>
+
+      <div class="flex gap-3 justify-end">
+        <a href="{{ url_for('auftraege_detail', id=order.id) if order else url_for('auftraege_list') }}"
+           class="btn btn-outline">
+          <i class="fa-solid fa-xmark"></i> Abbrechen
+        </a>
+        <button type="submit" class="btn btn-primary">
+          <i class="fa-solid fa-check"></i>
+          {{ 'Änderungen speichern' if order else 'Auftrag erstellen' }}
+        </button>
+      </div>
+
+    </form>
+  </div>
+</div>
+
+{% endblock %}

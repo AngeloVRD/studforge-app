@@ -1,0 +1,167 @@
+{% extends 'base.html' %}
+{% block title %}{{ customer.name }} — Studforge{% endblock %}
+{% block page_title %}Kundendetails{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('auftraege_neu') }}?customer_id={{ customer.id }}" class="btn btn-primary">
+    <i class="fa-solid fa-plus"></i> Neuer Auftrag
+  </a>
+  <a href="{{ url_for('kunden_edit', id=customer.id) }}" class="btn btn-outline">
+    <i class="fa-solid fa-pen"></i> Bearbeiten
+  </a>
+{% endblock %}
+
+{% block content %}
+
+<div class="breadcrumb">
+  <a href="{{ url_for('kunden_list') }}">Kunden</a>
+  <i class="fa-solid fa-chevron-right"></i>
+  <span>{{ customer.name }}</span>
+</div>
+
+<div class="detail-grid">
+
+  <!-- Left column -->
+  <div>
+    <div class="card mb-4">
+      <div class="card-header">
+        <span class="card-title"><i class="fa-solid fa-user"></i> Kundeninformationen</span>
+      </div>
+      <div class="card-body">
+        <!-- Avatar + name -->
+        <div class="flex items-center gap-4 mb-5">
+          <div style="width:56px;height:56px;border-radius:50%;background:var(--accent-dim);border:2px solid rgba(255,101,0,.25);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;color:var(--accent);">
+            {{ customer.name[0].upper() }}
+          </div>
+          <div>
+            <div style="font-size:20px;font-weight:700;">{{ customer.name }}</div>
+            <div class="text-muted text-sm">Kunde seit {{ customer.created_at[:10] if customer.created_at else '—' }}</div>
+          </div>
+        </div>
+
+        <div class="info-row">
+          <span class="info-label"><i class="fa-solid fa-envelope" style="margin-right:6px;color:var(--text-dim)"></i>E-Mail</span>
+          <span class="info-value">
+            {% if customer.email %}
+              <a href="mailto:{{ customer.email }}" style="color:var(--accent)">{{ customer.email }}</a>
+            {% else %}<span class="info-empty">nicht angegeben</span>{% endif %}
+          </span>
+        </div>
+
+        <div class="info-row">
+          <span class="info-label"><i class="fa-solid fa-phone" style="margin-right:6px;color:var(--text-dim)"></i>Telefon</span>
+          <span class="info-value">
+            {% if customer.phone %}
+              <a href="tel:{{ customer.phone }}" style="color:var(--accent)">{{ customer.phone }}</a>
+            {% else %}<span class="info-empty">nicht angegeben</span>{% endif %}
+          </span>
+        </div>
+
+        <div class="info-row">
+          <span class="info-label"><i class="fa-solid fa-location-dot" style="margin-right:6px;color:var(--text-dim)"></i>Adresse</span>
+          <span class="info-value">{{ customer.address or '<span class="info-empty">nicht angegeben</span>' }}</span>
+        </div>
+
+        {% if customer.notes %}
+        <div class="info-row" style="flex-direction:column;gap:8px;">
+          <span class="info-label"><i class="fa-solid fa-note-sticky" style="margin-right:6px;color:var(--text-dim)"></i>Notizen</span>
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 14px;font-size:13.5px;color:var(--text-muted);white-space:pre-wrap;line-height:1.7;">{{ customer.notes }}</div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Orders list -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><i class="fa-solid fa-layer-group"></i> Aufträge ({{ orders|length }})</span>
+        <a href="{{ url_for('auftraege_neu') }}" class="btn btn-sm btn-primary">
+          <i class="fa-solid fa-plus"></i> Neu
+        </a>
+      </div>
+      <div class="table-wrap">
+        {% if orders %}
+        <table>
+          <thead>
+            <tr>
+              <th>Nr.</th>
+              <th>Titel</th>
+              <th>Status</th>
+              <th>Preis</th>
+              <th>Datum</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for o in orders %}
+            <tr data-href="{{ url_for('auftraege_detail', id=o.id) }}">
+              <td><span class="order-num">{{ o.order_number or ('#%04d' % o.id) }}</span></td>
+              <td><strong>{{ o.title }}</strong></td>
+              <td><span class="badge badge-{{ o.status }}">{{ STATUSES[o.status].label if o.status in STATUSES else o.status }}</span></td>
+              <td>
+                {% if o.final_price %}€ {{ "%.2f"|format(o.final_price) }}
+                {% elif o.estimated_price %}<span class="text-muted">≈ € {{ "%.2f"|format(o.estimated_price) }}</span>
+                {% else %}<span class="text-muted">—</span>{% endif %}
+              </td>
+              <td class="text-muted text-sm">{{ o.created_at[:10] if o.created_at else '—' }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state" style="padding:40px;">
+          <i class="fa-solid fa-layer-group" style="font-size:32px;"></i>
+          <p>Noch keine Aufträge für diesen Kunden.</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Right column -->
+  <div>
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><i class="fa-solid fa-chart-bar"></i> Statistik</span>
+      </div>
+      <div class="card-body">
+        {% set total_revenue = orders | selectattr('paid', 'equalto', 1) | sum(attribute='final_price') %}
+        {% set open_orders = orders | selectattr('status', 'ne', 'abgeholt') | selectattr('status', 'ne', 'storniert') | list %}
+
+        <div style="margin-bottom:16px;">
+          <div class="stat-label">Aufträge gesamt</div>
+          <div style="font-size:26px;font-weight:800;color:var(--text);">{{ orders|length }}</div>
+        </div>
+        <div style="margin-bottom:16px;">
+          <div class="stat-label">Aktive Aufträge</div>
+          <div style="font-size:26px;font-weight:800;color:var(--accent);">{{ open_orders|length }}</div>
+        </div>
+        <div>
+          <div class="stat-label">Umsatz (bezahlt)</div>
+          <div style="font-size:26px;font-weight:800;color:var(--success);">€ {{ "%.2f"|format(total_revenue) }}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mt-3">
+      <div class="card-header">
+        <span class="card-title"><i class="fa-solid fa-gear"></i> Aktionen</span>
+      </div>
+      <div class="card-body flex-col gap-2 flex">
+        <a href="{{ url_for('kunden_edit', id=customer.id) }}" class="btn btn-outline w-full">
+          <i class="fa-solid fa-pen"></i> Daten bearbeiten
+        </a>
+        <a href="{{ url_for('auftraege_neu') }}" class="btn btn-primary w-full">
+          <i class="fa-solid fa-plus"></i> Neuer Auftrag
+        </a>
+        <div class="divider" style="margin:8px 0;"></div>
+        <form method="post" action="{{ url_for('kunden_delete', id=customer.id) }}" class="confirm-delete">
+          <button type="submit" class="btn btn-danger w-full">
+            <i class="fa-solid fa-trash"></i> Kunde löschen
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

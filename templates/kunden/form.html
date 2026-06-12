@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+{% block title %}{{ page_title }} — Studforge{% endblock %}
+{% block page_title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+
+<div class="breadcrumb">
+  <a href="{{ url_for('kunden_list') }}">Kunden</a>
+  <i class="fa-solid fa-chevron-right"></i>
+  <span>{{ page_title }}</span>
+</div>
+
+<div class="card" style="max-width: 720px;">
+  <div class="card-header">
+    <span class="card-title">
+      <i class="fa-solid fa-user{% if not customer %}-plus{% endif %}"></i>
+      {{ page_title }}
+    </span>
+  </div>
+  <div class="card-body">
+    <form method="post">
+      <div class="form-grid">
+        <div class="form-group col-span-2">
+          <label class="form-label">Name *</label>
+          <input type="text" name="name" value="{{ customer.name if customer else '' }}"
+                 placeholder="Vor- und Nachname oder Firmenname" required autofocus>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">E-Mail</label>
+          <input type="email" name="email" value="{{ customer.email if customer else '' }}"
+                 placeholder="kunde@beispiel.de">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Telefon</label>
+          <input type="tel" name="phone" value="{{ customer.phone if customer else '' }}"
+                 placeholder="+43 123 456 789">
+        </div>
+
+        <div class="form-group col-span-2">
+          <label class="form-label">Adresse</label>
+          <input type="text" name="address" value="{{ customer.address if customer else '' }}"
+                 placeholder="Straße, PLZ, Ort">
+        </div>
+
+        <div class="form-group col-span-2">
+          <label class="form-label">Notizen</label>
+          <textarea name="notes" placeholder="Interne Notizen zum Kunden …">{{ customer.notes if customer else '' }}</textarea>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="flex gap-3 justify-end">
+        <a href="{{ url_for('kunden_detail', id=customer.id) if customer else url_for('kunden_list') }}"
+           class="btn btn-outline">
+          <i class="fa-solid fa-xmark"></i> Abbrechen
+        </a>
+        <button type="submit" class="btn btn-primary">
+          <i class="fa-solid fa-check"></i>
+          {{ 'Änderungen speichern' if customer else 'Kunde erstellen' }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}

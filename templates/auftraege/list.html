@@ -1,0 +1,131 @@
+{% extends 'base.html' %}
+{% block title %}Aufträge — Studforge{% endblock %}
+{% block page_title %}Aufträge{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('auftraege_neu') }}" class="btn btn-primary">
+    <i class="fa-solid fa-plus"></i> Neuer Auftrag
+  </a>
+{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <div class="page-header-left">
+    <h2>Auftragsliste</h2>
+    <span class="sub">{{ orders|length }} Auftrag{% if orders|length != 1 %}e{% endif %} gefunden</span>
+  </div>
+  <form method="get" class="search-bar">
+    <i class="fa-solid fa-magnifying-glass search-icon"></i>
+    <input type="text" name="q" value="{{ q }}" placeholder="Titel, Nr. oder Kunde …" autocomplete="off">
+    {% if status_f %}<input type="hidden" name="status" value="{{ status_f }}">{% endif %}
+  </form>
+</div>
+
+<!-- Filter tabs -->
+<div class="filter-tabs">
+  <a href="{{ url_for('auftraege_list', q=q) }}"
+     class="filter-tab {% if not status_f %}active{% endif %}">
+    Alle
+    <span class="filter-count">{{ counts.values()|sum }}</span>
+  </a>
+  {% for key, info in STATUSES.items() %}
+  <a href="{{ url_for('auftraege_list', status=key, q=q) }}"
+     class="filter-tab {% if status_f == key %}active{% endif %}">
+    {{ info.label }}
+    {% if counts.get(key) %}
+    <span class="filter-count">{{ counts.get(key, 0) }}</span>
+    {% endif %}
+  </a>
+  {% endfor %}
+</div>
+
+<div class="card">
+  <div class="table-wrap">
+    {% if orders %}
+    <table>
+      <thead>
+        <tr>
+          <th>Auftragsnr.</th>
+          <th>Titel</th>
+          <th>Kunde</th>
+          <th>Material</th>
+          <th>Status</th>
+          <th>Preis</th>
+          <th>Fällig</th>
+          <th>Erstellt</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for o in orders %}
+        <tr data-href="{{ url_for('auftraege_detail', id=o.id) }}">
+          <td><span class="order-num">{{ o.order_number or ('#%04d' % o.id) }}</span></td>
+          <td>
+            <strong>{{ o.title }}</strong>
+            {% if o.quantity > 1 %}
+            <span class="tag" style="margin-left:6px;">×{{ o.quantity }}</span>
+            {% endif %}
+          </td>
+          <td>{{ o.customer_name or '<span class="text-muted">—</span>' }}</td>
+          <td class="text-muted text-sm">{{ o.material or '—' }}</td>
+          <td>
+            <span class="badge badge-{{ o.status }}">
+              {{ STATUSES[o.status].label if o.status in STATUSES else o.status }}
+            </span>
+          </td>
+          <td>
+            {% if o.final_price %}
+              <strong>€ {{ "%.2f"|format(o.final_price) }}</strong>
+              {% if o.paid %}<i class="fa-solid fa-circle-check text-success" style="margin-left:4px;" title="Bezahlt"></i>{% endif %}
+            {% elif o.estimated_price %}
+              <span class="text-muted">≈ € {{ "%.2f"|format(o.estimated_price) }}</span>
+            {% else %}
+              <span class="text-muted">—</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if o.due_date %}
+              <span class="text-sm {% if o.due_date < now.strftime('%Y-%m-%d') and o.status not in ['abgeholt','storniert'] %}text-danger{% else %}text-muted{% endif %}">
+                {{ o.due_date }}
+              </span>
+            {% else %}
+              <span class="text-muted">—</span>
+            {% endif %}
+          </td>
+          <td class="text-muted text-sm">{{ o.created_at[:10] if o.created_at else '—' }}</td>
+          <td>
+            <div class="flex gap-2 justify-end" onclick="event.stopPropagation()">
+              <a href="{{ url_for('auftraege_edit', id=o.id) }}" class="btn btn-xs btn-outline">
+                <i class="fa-solid fa-pen"></i>
+              </a>
+              <form method="post" action="{{ url_for('auftraege_delete', id=o.id) }}" class="confirm-delete">
+                <button type="submit" class="btn btn-xs btn-danger">
+                  <i class="fa-solid fa-trash"></i>
+                </button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+      {% if q or status_f %}
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <p>Keine Aufträge gefunden.</p>
+        <a href="{{ url_for('auftraege_list') }}" class="btn btn-outline">Filter zurücksetzen</a>
+      {% else %}
+        <i class="fa-solid fa-layer-group"></i>
+        <p>Noch keine Aufträge vorhanden.</p>
+        <a href="{{ url_for('auftraege_neu') }}" class="btn btn-primary">
+          <i class="fa-solid fa-plus"></i> Ersten Auftrag erstellen
+        </a>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}

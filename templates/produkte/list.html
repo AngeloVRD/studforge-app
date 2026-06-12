@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+{% block title %}Produkte & Preise — Studforge{% endblock %}
+{% block page_title %}Produkte & Preise{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('produkte_neu') }}" class="btn btn-primary">
+    <i class="fa-solid fa-plus"></i> Neues Produkt
+  </a>
+{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <div class="page-header-left">
+    <h2>Produkt- &amp; Preiskatalog</h2>
+    <span class="sub">Leistungen und Materialien mit Preisen</span>
+  </div>
+</div>
+
+<div class="card">
+  <div class="table-wrap">
+    {% if products %}
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Kategorie</th>
+          <th>Material</th>
+          <th>Preis</th>
+          <th>Einheit</th>
+          <th>Status</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in products %}
+        <tr>
+          <td>
+            <div>
+              <strong>{{ p.name }}</strong>
+              {% if p.description %}
+              <div class="text-muted text-sm" style="margin-top:2px;">{{ p.description[:60] }}{% if p.description|length > 60 %}…{% endif %}</div>
+              {% endif %}
+            </div>
+          </td>
+          <td>{{ p.category or '<span class="text-muted">—</span>' }}</td>
+          <td>{{ p.material or '<span class="text-muted">—</span>' }}</td>
+          <td><strong>€ {{ "%.2f"|format(p.price) }}</strong></td>
+          <td class="text-muted">{{ p.price_unit }}</td>
+          <td>
+            {% if p.active %}
+              <span class="badge badge-active">Aktiv</span>
+            {% else %}
+              <span class="badge badge-inactive">Inaktiv</span>
+            {% endif %}
+          </td>
+          <td>
+            <div class="flex gap-2 justify-end">
+              <a href="{{ url_for('produkte_edit', id=p.id) }}" class="btn btn-xs btn-outline">
+                <i class="fa-solid fa-pen"></i>
+              </a>
+              <form method="post" action="{{ url_for('produkte_delete', id=p.id) }}" class="confirm-delete">
+                <button type="submit" class="btn btn-xs btn-danger">
+                  <i class="fa-solid fa-trash"></i>
+                </button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+      <i class="fa-solid fa-cubes"></i>
+      <p>Noch keine Produkte oder Leistungen vorhanden.</p>
+      <a href="{{ url_for('produkte_neu') }}" class="btn btn-primary">
+        <i class="fa-solid fa-plus"></i> Erstes Produkt anlegen
+      </a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}

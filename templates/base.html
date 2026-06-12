@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Studforge{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+<!-- ── Sidebar ───────────────────────────────────────────────── -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-wrap">
+      <div class="logo-hex">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round">
+          <polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/>
+          <line x1="12" y1="2" x2="12" y2="22"/>
+          <line x1="2" y1="8.5" x2="22" y2="8.5"/>
+          <line x1="2" y1="15.5" x2="22" y2="15.5"/>
+        </svg>
+      </div>
+      <div>
+        <div class="logo-name">STUDFORGE</div>
+        <div class="logo-sub">3D Manufaktur</div>
+      </div>
+    </div>
+  </div>
+
+  <nav class="sidebar-nav">
+    <a href="{{ url_for('dashboard') }}"
+       class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}">
+      <i class="fa-solid fa-gauge-high"></i>
+      <span>Dashboard</span>
+    </a>
+
+    <div class="nav-section-label">Verwaltung</div>
+
+    <a href="{{ url_for('kunden_list') }}"
+       class="nav-link {% if 'kunden' in (request.endpoint or '') %}active{% endif %}">
+      <i class="fa-solid fa-users"></i>
+      <span>Kunden</span>
+    </a>
+
+    <a href="{{ url_for('produkte_list') }}"
+       class="nav-link {% if 'produkte' in (request.endpoint or '') %}active{% endif %}">
+      <i class="fa-solid fa-cubes"></i>
+      <span>Produkte &amp; Preise</span>
+    </a>
+
+    <a href="{{ url_for('auftraege_list') }}"
+       class="nav-link {% if 'auftraege' in (request.endpoint or '') %}active{% endif %}">
+      <i class="fa-solid fa-layer-group"></i>
+      <span>Aufträge</span>
+    </a>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="sf-version">Studforge v1.0</div>
+    <div class="sf-status">
+      <span class="status-dot"></span>
+      System aktiv
+    </div>
+  </div>
+</aside>
+
+<!-- ── Main ──────────────────────────────────────────────────── -->
+<main class="main">
+  <div class="topbar">
+    <div class="topbar-left">
+      <h1 class="page-title">{% block page_title %}{% endblock %}</h1>
+    </div>
+    <div class="topbar-actions">
+      {% block topbar_actions %}{% endblock %}
+    </div>
+  </div>
+
+  <div class="content">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for cat, msg in messages %}
+        <div class="alert alert-{{ cat }}">
+          <i class="fa-solid {% if cat == 'success' %}fa-circle-check{% elif cat == 'danger' %}fa-circle-exclamation{% elif cat == 'warning' %}fa-triangle-exclamation{% else %}fa-circle-info{% endif %}"></i>
+          {{ msg }}
+          <button class="alert-close"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+      {% endfor %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+  </div>
+</main>
+
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

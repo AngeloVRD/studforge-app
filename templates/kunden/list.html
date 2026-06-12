@@ -1,0 +1,93 @@
+{% extends 'base.html' %}
+{% block title %}Kunden — Studforge{% endblock %}
+{% block page_title %}Kunden{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('kunden_neu') }}" class="btn btn-primary">
+    <i class="fa-solid fa-user-plus"></i> Neuer Kunde
+  </a>
+{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <div class="page-header-left">
+    <h2>Kundenliste</h2>
+    <span class="sub">{{ customers|length }} Kunde{% if customers|length != 1 %}n{% endif %} gefunden</span>
+  </div>
+  <form method="get" class="search-bar">
+    <i class="fa-solid fa-magnifying-glass search-icon"></i>
+    <input type="text" name="q" value="{{ q }}" placeholder="Name, E-Mail oder Telefon …" autocomplete="off">
+  </form>
+</div>
+
+<div class="card">
+  <div class="table-wrap">
+    {% if customers %}
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>E-Mail</th>
+          <th>Telefon</th>
+          <th>Aufträge</th>
+          <th>Seit</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in customers %}
+        <tr data-href="{{ url_for('kunden_detail', id=c.id) }}">
+          <td>
+            <div class="flex items-center gap-3">
+              <div style="width:34px;height:34px;border-radius:50%;background:var(--accent-dim);border:1px solid rgba(255,101,0,.2);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--accent);flex-shrink:0;">
+                {{ c.name[0].upper() }}
+              </div>
+              <strong>{{ c.name }}</strong>
+            </div>
+          </td>
+          <td>{{ c.email or '<span class="text-muted">—</span>' }}</td>
+          <td>{{ c.phone or '<span class="text-muted">—</span>' }}</td>
+          <td>
+            {% if c.cnt %}
+              <span class="badge badge-active">{{ c.cnt }} Auftrag{% if c.cnt != 1 %}e{% endif %}</span>
+            {% else %}
+              <span class="text-muted text-sm">—</span>
+            {% endif %}
+          </td>
+          <td class="text-muted text-sm">{{ c.created_at[:10] if c.created_at else '—' }}</td>
+          <td>
+            <div class="flex gap-2 justify-end" onclick="event.stopPropagation()">
+              <a href="{{ url_for('kunden_edit', id=c.id) }}" class="btn btn-xs btn-outline">
+                <i class="fa-solid fa-pen"></i>
+              </a>
+              <form method="post" action="{{ url_for('kunden_delete', id=c.id) }}" class="confirm-delete">
+                <button type="submit" class="btn btn-xs btn-danger">
+                  <i class="fa-solid fa-trash"></i>
+                </button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+      {% if q %}
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <p>Keine Kunden für „{{ q }}" gefunden.</p>
+        <a href="{{ url_for('kunden_list') }}" class="btn btn-outline">Suche zurücksetzen</a>
+      {% else %}
+        <i class="fa-solid fa-users"></i>
+        <p>Noch keine Kunden vorhanden.</p>
+        <a href="{{ url_for('kunden_neu') }}" class="btn btn-primary">
+          <i class="fa-solid fa-user-plus"></i> Ersten Kunden anlegen
+        </a>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}

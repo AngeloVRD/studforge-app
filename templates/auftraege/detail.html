@@ -1,0 +1,229 @@
+{% extends 'base.html' %}
+{% block title %}{{ order.order_number or order.title }} — Studforge{% endblock %}
+{% block page_title %}Auftragsdetails{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('auftraege_edit', id=order.id) }}" class="btn btn-outline">
+    <i class="fa-solid fa-pen"></i> Bearbeiten
+  </a>
+{% endblock %}
+
+{% block content %}
+
+<div class="breadcrumb">
+  <a href="{{ url_for('auftraege_list') }}">Aufträge</a>
+  <i class="fa-solid fa-chevron-right"></i>
+  <span>{{ order.order_number or ('#%04d' % order.id) }}</span>
+</div>
+
+<!-- Order header -->
+<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:24px;flex-wrap:wrap;">
+  <div>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px;">
+      <span class="order-num" style="font-size:14px;">{{ order.order_number or ('#%04d' % order.id) }}</span>
+      <span class="badge badge-{{ order.status }}">{{ STATUSES[order.status].label if order.status in STATUSES else order.status }}</span>
+      {% if order.paid %}<span class="badge badge-active"><i class="fa-solid fa-circle-check"></i> Bezahlt</span>{% endif %}
+    </div>
+    <h2 style="font-size:24px;font-weight:800;margin-bottom:4px;">{{ order.title }}</h2>
+    <div class="text-muted text-sm">
+      Erstellt am {{ order.created_at[:10] if order.created_at else '—' }}
+      {% if order.updated_at and order.updated_at != order.created_at %}
+        · Aktualisiert {{ order.updated_at[:10] }}
+      {% endif %}
+    </div>
+  </div>
+  <div class="flex gap-2 flex-wrap">
+    {% if order.due_date %}
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 16px;text-align:center;">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);margin-bottom:4px;">Fällig am</div>
+      <div style="font-size:15px;font-weight:700;color:{% if order.due_date < now.strftime('%Y-%m-%d') and order.status not in ['abgeholt','storniert'] %}var(--danger){% else %}var(--text){% endif %};">
+        {{ order.due_date }}
+      </div>
+    </div>
+    {% endif %}
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 16px;text-align:center;">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);margin-bottom:4px;">Endpreis</div>
+      <div style="font-size:18px;font-weight:800;color:{% if order.final_price %}var(--success){% else %}var(--text-muted){% endif %};">
+        {% if order.final_price %}€ {{ "%.2f"|format(order.final_price) }}{% else %}—{% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Status stepper -->
+<div class="card mb-4">
+  <div class="card-header">
+    <span class="card-title"><i class="fa-solid fa-arrow-right-arrow-left"></i> Status ändern</span>
+  </div>
+  <div class="card-body">
+    <form method="post" action="{{ url_for('auftraege_status', id=order.id) }}">
+      <div class="status-stepper">
+        {% for key, info in STATUSES.items() %}
+        <button type="submit" name="status" value="{{ key }}"
+                class="status-step {% if order.status == key %}current{% endif %}">
+          {{ info.label }}
+        </button>
+        {% endfor %}
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="detail-grid">
+
+  <!-- Left: Details -->
+  <div>
+
+    <!-- Print details -->
+    <div class="card mb-4">
+      <div class="card-header">
+        <span class="card-title"><i class="fa-solid fa-print"></i> Druckdetails</span>
+      </div>
+      <div class="card-body">
+        {% if order.description %}
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:16px;font-size:13.5px;color:var(--text-muted);white-space:pre-wrap;line-height:1.7;">{{ order.description }}</div>
+        {% endif %}
+
+        <div class="info-row">
+          <span class="info-label">Material</span>
+          <span class="info-value">{{ order.material or '<span class="info-empty">—</span>' }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Farbe</span>
+          <span class="info-value">{{ order.color or '<span class="info-empty">—</span>' }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Datei / Modell</span>
+          <span class="info-value">
+            {% if order.file_name %}
+            <span class="tag"><i class="fa-solid fa-file" style="font-size:11px;"></i>{{ order.file_name }}</span>
+            {% else %}<span class="info-empty">—</span>{% endif %}
+          </span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Schichthöhe</span>
+          <span class="info-value">{{ order.layer_height or '<span class="info-empty">—</span>' }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Infill</span>
+          <span class="info-value">{{ order.infill or '<span class="info-empty">—</span>' }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Stützstrukturen</span>
+          <span class="info-value">{{ order.supports or '<span class="info-empty">—</span>' }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Menge</span>
+          <span class="info-value"><strong>{{ order.quantity }}×</strong></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Notes -->
+    {% if order.notes %}
+    <div class="card mb-4">
+      <div class="card-header">
+        <span class="card-title"><i class="fa-solid fa-note-sticky"></i> Interne Notizen</span>
+      </div>
+      <div class="card-body">
+        <div style="font-size:13.5px;color:var(--text-muted);white-space:pre-wrap;line-height:1.7;">{{ order.notes }}</div>
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+
+  <!-- Right: Sidebar info -->
+  <div>
+
+    <!-- Customer -->
+    <div class="card mb-4">
+      <div class="card-header">
+        <span class="card-title"><i class="fa-solid fa-user"></i> Kunde</span>
+      </div>
+      <div class="card-body">
+        {% if order.customer_name %}
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+          <div style="width:40px;height:40px;border-radius:50%;background:var(--accent-dim);border:1px solid rgba(255,101,0,.2);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:var(--accent);flex-shrink:0;">
+            {{ order.customer_name[0].upper() }}
+          </div>
+          <strong style="font-size:15px;">{{ order.customer_name }}</strong>
+        </div>
+        {% if order.customer_email %}
+        <div class="info-row">
+          <span class="info-label">E-Mail</span>
+          <span class="info-value"><a href="mailto:{{ order.customer_email }}" style="color:var(--accent);">{{ order.customer_email }}</a></span>
+        </div>
+        {% endif %}
+        {% if order.customer_phone %}
+        <div class="info-row">
+          <span class="info-label">Telefon</span>
+          <span class="info-value"><a href="tel:{{ order.customer_phone }}" style="color:var(--accent);">{{ order.customer_phone }}</a></span>
+        </div>
+        {% endif %}
+        <div class="mt-3">
+          <a href="{{ url_for('kunden_detail', id=order.customer_id) }}" class="btn btn-sm btn-outline w-full">
+            <i class="fa-solid fa-user"></i> Kundenprofil öffnen
+          </a>
+        </div>
+        {% else %}
+        <span class="info-empty">Kein Kunde zugewiesen</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Pricing -->
+    <div class="card mb-4">
+      <div class="card-header">
+        <span class="card-title"><i class="fa-solid fa-receipt"></i> Abrechnung</span>
+      </div>
+      <div class="card-body">
+        <div class="info-row">
+          <span class="info-label">Schätzpreis</span>
+          <span class="info-value">
+            {% if order.estimated_price %}€ {{ "%.2f"|format(order.estimated_price) }}
+            {% else %}<span class="info-empty">—</span>{% endif %}
+          </span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Endpreis</span>
+          <span class="info-value" style="font-size:16px;font-weight:700;color:{% if order.final_price %}var(--success){% else %}var(--text-muted){% endif %};">
+            {% if order.final_price %}€ {{ "%.2f"|format(order.final_price) }}
+            {% else %}<span class="info-empty">—</span>{% endif %}
+          </span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Bezahlt</span>
+          <span class="info-value">
+            {% if order.paid %}
+            <span class="badge badge-active"><i class="fa-solid fa-circle-check"></i> Ja</span>
+            {% else %}
+            <span class="badge badge-inactive">Nein</span>
+            {% endif %}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><i class="fa-solid fa-gear"></i> Aktionen</span>
+      </div>
+      <div class="card-body flex-col flex gap-2">
+        <a href="{{ url_for('auftraege_edit', id=order.id) }}" class="btn btn-outline w-full">
+          <i class="fa-solid fa-pen"></i> Auftrag bearbeiten
+        </a>
+        <div class="divider" style="margin:4px 0;"></div>
+        <form method="post" action="{{ url_for('auftraege_delete', id=order.id) }}" class="confirm-delete">
+          <button type="submit" class="btn btn-danger w-full">
+            <i class="fa-solid fa-trash"></i> Auftrag löschen
+          </button>
+        </form>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}

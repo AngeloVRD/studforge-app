@@ -1,0 +1,96 @@
+{% extends 'base.html' %}
+{% block title %}{{ page_title }} — Studforge{% endblock %}
+{% block page_title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+
+<div class="breadcrumb">
+  <a href="{{ url_for('produkte_list') }}">Produkte &amp; Preise</a>
+  <i class="fa-solid fa-chevron-right"></i>
+  <span>{{ page_title }}</span>
+</div>
+
+<div class="card" style="max-width: 720px;">
+  <div class="card-header">
+    <span class="card-title">
+      <i class="fa-solid fa-cube"></i>
+      {{ page_title }}
+    </span>
+  </div>
+  <div class="card-body">
+    <form method="post">
+      <div class="form-grid">
+
+        <div class="form-group col-span-2">
+          <label class="form-label">Name *</label>
+          <input type="text" name="name" value="{{ product.name if product else '' }}"
+                 placeholder="z. B. Resin Druck Standard" required autofocus>
+        </div>
+
+        <div class="form-group col-span-2">
+          <label class="form-label">Beschreibung</label>
+          <textarea name="description" placeholder="Kurze Beschreibung der Leistung …">{{ product.description if product else '' }}</textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Kategorie</label>
+          <select name="category">
+            <option value="">— Kategorie wählen —</option>
+            {% for cat in CATEGORIES %}
+            <option value="{{ cat }}" {% if product and product.category == cat %}selected{% endif %}>{{ cat }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Material</label>
+          <select name="material">
+            <option value="">— Material wählen —</option>
+            {% for mat in MATERIALS %}
+            <option value="{{ mat }}" {% if product and product.material == mat %}selected{% endif %}>{{ mat }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Preis (€)</label>
+          <input type="number" name="price" value="{{ product.price if product else '' }}"
+                 placeholder="0.00" step="0.01" min="0">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Preiseinheit</label>
+          <select name="price_unit">
+            {% for unit in ['Stück', 'cm³', 'Gramm', 'Stunde', 'Liter', 'Pauschale'] %}
+            <option value="{{ unit }}" {% if product and product.price_unit == unit %}selected{% elif not product and unit == 'Stück' %}selected{% endif %}>{{ unit }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        {% if product %}
+        <div class="form-group col-span-2">
+          <label class="checkbox-wrap">
+            <input type="checkbox" name="active" {% if product.active %}checked{% endif %}>
+            <span class="checkbox-label">Produkt ist aktiv (wird im Katalog angezeigt)</span>
+          </label>
+        </div>
+        {% endif %}
+
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="flex gap-3 justify-end">
+        <a href="{{ url_for('produkte_list') }}" class="btn btn-outline">
+          <i class="fa-solid fa-xmark"></i> Abbrechen
+        </a>
+        <button type="submit" class="btn btn-primary">
+          <i class="fa-solid fa-check"></i>
+          {{ 'Änderungen speichern' if product else 'Produkt erstellen' }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}

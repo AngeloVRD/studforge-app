@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard — Studforge{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('auftraege_neu') }}" class="btn btn-primary">
+    <i class="fa-solid fa-plus"></i> Neuer Auftrag
+  </a>
+{% endblock %}
+
+{% block content %}
+
+<!-- Stat cards -->
+<div class="stat-grid">
+  <div class="stat-card c-info">
+    <div class="stat-label">Kunden gesamt</div>
+    <div class="stat-value info">{{ stats.customers }}</div>
+    <div class="stat-icon"><i class="fa-solid fa-users"></i></div>
+  </div>
+  <div class="stat-card c-purple">
+    <div class="stat-label">Aufträge gesamt</div>
+    <div class="stat-value purple">{{ stats.orders_total }}</div>
+    <div class="stat-icon"><i class="fa-solid fa-layer-group"></i></div>
+  </div>
+  <div class="stat-card c-accent">
+    <div class="stat-label">Aktive Aufträge</div>
+    <div class="stat-value accent">{{ stats.orders_active }}</div>
+    <div class="stat-icon"><i class="fa-solid fa-print"></i></div>
+  </div>
+  <div class="stat-card c-success">
+    <div class="stat-label">Umsatz (Monat, bezahlt)</div>
+    <div class="stat-value success">€ {{ "%.2f"|format(stats.revenue_month) }}</div>
+    <div class="stat-icon"><i class="fa-solid fa-euro-sign"></i></div>
+  </div>
+</div>
+
+<!-- Status overview -->
+<div class="card mb-4">
+  <div class="card-header">
+    <span class="card-title">
+      <i class="fa-solid fa-chart-pie"></i>
+      Aufträge nach Status
+    </span>
+    <a href="{{ url_for('auftraege_list') }}" class="btn btn-sm btn-outline">
+      <i class="fa-solid fa-arrow-right"></i> Alle Aufträge
+    </a>
+  </div>
+  <div class="card-body">
+    <div class="status-overview">
+      {% for key, info in STATUSES.items() %}
+      <a href="{{ url_for('auftraege_list', status=key) }}" class="status-item">
+        <span class="badge badge-{{ key }}">{{ info.label }}</span>
+        <span class="status-count">{{ counts.get(key, 0) }}</span>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<!-- Recent orders -->
+<div class="card">
+  <div class="card-header">
+    <span class="card-title">
+      <i class="fa-solid fa-clock-rotate-left"></i>
+      Letzte Aufträge
+    </span>
+    <a href="{{ url_for('auftraege_neu') }}" class="btn btn-sm btn-primary">
+      <i class="fa-solid fa-plus"></i> Neu
+    </a>
+  </div>
+  <div class="table-wrap">
+    {% if recent %}
+    <table>
+      <thead>
+        <tr>
+          <th>Auftragsnr.</th>
+          <th>Titel</th>
+          <th>Kunde</th>
+          <th>Material</th>
+          <th>Status</th>
+          <th>Preis</th>
+          <th>Datum</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for o in recent %}
+        <tr data-href="{{ url_for('auftraege_detail', id=o.id) }}">
+          <td><span class="order-num">{{ o.order_number or ('#%04d' % o.id) }}</span></td>
+          <td><strong>{{ o.title }}</strong></td>
+          <td>{{ o.customer_name or '<span class="text-muted">—</span>' }}</td>
+          <td>{{ o.material or '<span class="text-muted">—</span>' }}</td>
+          <td>
+            <span class="badge badge-{{ o.status }}">
+              {{ STATUSES[o.status].label if o.status in STATUSES else o.status }}
+            </span>
+          </td>
+          <td>
+            {% if o.final_price %}
+              <strong>€ {{ "%.2f"|format(o.final_price) }}</strong>
+            {% elif o.estimated_price %}
+              <span class="text-muted">≈ € {{ "%.2f"|format(o.estimated_price) }}</span>
+            {% else %}
+              <span class="text-muted">—</span>
+            {% endif %}
+          </td>
+          <td class="text-muted text-sm">{{ o.created_at[:10] if o.created_at else '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+      <i class="fa-solid fa-layer-group"></i>
+      <p>Noch keine Aufträge vorhanden.</p>
+      <a href="{{ url_for('auftraege_neu') }}" class="btn btn-primary">
+        <i class="fa-solid fa-plus"></i> Ersten Auftrag erstellen
+      </a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}
