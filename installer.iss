@@ -14,11 +14,10 @@ AppPublisherURL={#AppURL}
 AppSupportURL={#AppURL}
 AppUpdatesURL={#AppURL}
 
-; Install to user folder — no admin needed
+; Install to user folder — no admin needed (like Chrome, VS Code)
 DefaultDirName={localappdata}\Programs\{#AppName}
 DefaultGroupName={#AppName}
 PrivilegesRequired=lowest
-PrivilegesRequiredOverridesAllowed=dialog
 
 AllowNoIcons=yes
 OutputDir=.
