@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Studforge öffnen …</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #080808;
+      color: #fff;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    body::before {
+      content: '';
+      position: fixed;
+      top: -200px; left: 50%;
+      transform: translateX(-50%);
+      width: 600px; height: 500px;
+      background: radial-gradient(circle, rgba(249,115,22,.13) 0%, transparent 65%);
+      pointer-events: none;
+    }
+    .card {
+      width: 340px;
+      text-align: center;
+      padding: 40px 30px;
+      animation: in .5s cubic-bezier(.34,1.56,.64,1);
+    }
+    @keyframes in {
+      from { opacity: 0; transform: translateY(20px) scale(.97); }
+      to   { opacity: 1; transform: translateY(0)    scale(1);   }
+    }
+    .hex {
+      width: 64px; height: 64px;
+      margin: 0 auto 20px;
+      background: linear-gradient(135deg, #f97316, #ea580c);
+      border-radius: 16px;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 10px 32px rgba(249,115,22,.4);
+    }
+    h1 { font-size: 24px; font-weight: 800; letter-spacing: 1.5px; }
+    .sub { font-size: 13px; color: #8a8a8a; margin-top: 6px; }
+    .status {
+      margin-top: 26px;
+      font-size: 14px;
+      color: #c9c9c9;
+      min-height: 20px;
+    }
+    .spinner {
+      width: 30px; height: 30px;
+      margin: 22px auto 0;
+      border: 3px solid #232323;
+      border-top-color: #f97316;
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .btn {
+      display: none;
+      margin-top: 24px;
+      padding: 13px 28px;
+      background: linear-gradient(135deg, #f97316, #ea580c);
+      color: #fff;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 15px;
+      border-radius: 11px;
+      box-shadow: 0 8px 22px rgba(249,115,22,.32);
+      transition: transform .2s cubic-bezier(.34,1.56,.64,1);
+    }
+    .btn:hover { transform: translateY(-2px); }
+    .hint { margin-top: 18px; font-size: 12px; color: #666; min-height: 16px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="hex">
+      <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linejoin="round">
+        <polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/>
+        <line x1="12" y1="2" x2="12" y2="22"/>
+        <line x1="2" y1="8.5" x2="22" y2="8.5"/>
+        <line x1="2" y1="15.5" x2="22" y2="15.5"/>
+      </svg>
+    </div>
+    <h1>STUDFORGE</h1>
+    <div class="sub">3D Manufaktur</div>
+
+    <div class="status" id="status">Server wird gesucht …</div>
+    <div class="spinner" id="spinner"></div>
+    <a class="btn" id="openBtn" href="#">Studforge öffnen</a>
+    <div class="hint" id="hint"></div>
+  </div>
+
+  <script>
+    // Liest die aktuelle Server-Adresse, die der Server automatisch
+    // nach GitHub schreibt, und leitet dorthin weiter.
+    var RAW = 'https://raw.githubusercontent.com/AngeloVRD/studforge-app/main/server_url.txt';
+    var statusEl = document.getElementById('status');
+    var spinner  = document.getElementById('spinner');
+    var openBtn  = document.getElementById('openBtn');
+    var hint     = document.getElementById('hint');
+    var tries    = 0;
+
+    function go() {
+      tries++;
+      fetch(RAW + '?t=' + Date.now(), { cache: 'no-store' })
+        .then(function (r) {
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          return r.text();
+        })
+        .then(function (txt) {
+          var url = txt.trim();
+          if (url.indexOf('http') !== 0) throw new Error('keine Adresse');
+          statusEl.textContent = 'Server gefunden — wird geöffnet …';
+          openBtn.href = url;
+          openBtn.style.display = 'inline-block';
+          spinner.style.display = 'none';
+          hint.textContent = 'Öffnet sich nicht automatisch? Auf den Knopf tippen.';
+          // Automatisch weiterleiten
+          setTimeout(function () { window.location.replace(url); }, 600);
+        })
+        .catch(function () {
+          spinner.style.display = 'none';
+          statusEl.textContent = 'Server gerade nicht erreichbar.';
+          hint.textContent = 'Läuft der Server-PC? Neuer Versuch in 5 Sekunden … (' + tries + ')';
+          setTimeout(function () {
+            spinner.style.display = 'block';
+            go();
+          }, 5000);
+        });
+    }
+    go();
+  </script>
+</body>
+</html>
