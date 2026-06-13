@@ -266,7 +266,7 @@ def first_run_dialog():
         t = tk.Label(f, text=title, font=('Segoe UI', 11, 'bold'),
                      bg=BG2, fg=WHITE, cursor='hand2')
         t.pack(anchor='w', padx=16, pady=(4, 0))
-        s = tk.Label(f, text=sub, font=('Segoe UI', 8.5),
+        s = tk.Label(f, text=sub, font=('Segoe UI', 9),
                      bg=BG2, fg=GRAY, cursor='hand2')
         s.pack(anchor='w', padx=16, pady=(1, 4))
         for el in (f, t, s):
@@ -329,7 +329,7 @@ def manual_url_dialog(cfg):
     entry.pack(fill='x', padx=36, ipady=8)
     entry.insert(0, cfg.get('last_url', ''))
 
-    status = tk.Label(root, text='', font=('Segoe UI', 8.5), bg=BG, fg='#ef4444')
+    status = tk.Label(root, text='', font=('Segoe UI', 9), bg=BG, fg='#ef4444')
     status.pack(pady=(6, 0))
 
     def connect():
