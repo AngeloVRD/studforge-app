@@ -99,6 +99,8 @@
   <script>
     // Liest die aktuelle Server-Adresse, die der Server automatisch
     // nach GitHub schreibt, und leitet dorthin weiter.
+    // API zuerst (sofort frisch), raw nur als Reserve (~5 Min Cache).
+    var API = 'https://api.github.com/repos/AngeloVRD/studforge-app/contents/server_url.txt';
     var RAW = 'https://raw.githubusercontent.com/AngeloVRD/studforge-app/main/server_url.txt';
     var statusEl = document.getElementById('status');
     var spinner  = document.getElementById('spinner');
@@ -106,13 +108,29 @@
     var hint     = document.getElementById('hint');
     var tries    = 0;
 
-    function go() {
-      tries++;
-      fetch(RAW + '?t=' + Date.now(), { cache: 'no-store' })
+    function fetchAddress() {
+      // Erst die API (frische Adresse, kein CDN-Cache)
+      return fetch(API + '?t=' + Date.now(), {
+          cache: 'no-store',
+          headers: { 'Accept': 'application/vnd.github.raw' }
+        })
         .then(function (r) {
-          if (!r.ok) throw new Error('HTTP ' + r.status);
+          if (!r.ok) throw new Error('api');
           return r.text();
         })
+        .catch(function () {
+          // Reserve: raw (kann kurz veraltet sein, aber besser als nichts)
+          return fetch(RAW + '?t=' + Date.now(), { cache: 'no-store' })
+            .then(function (r) {
+              if (!r.ok) throw new Error('raw');
+              return r.text();
+            });
+        });
+    }
+
+    function go() {
+      tries++;
+      fetchAddress()
         .then(function (txt) {
           var url = txt.trim();
           if (url.indexOf('http') !== 0) throw new Error('keine Adresse');
@@ -127,11 +145,11 @@
         .catch(function () {
           spinner.style.display = 'none';
           statusEl.textContent = 'Server gerade nicht erreichbar.';
-          hint.textContent = 'Läuft der Server-PC? Neuer Versuch in 5 Sekunden … (' + tries + ')';
+          hint.textContent = 'Läuft der Server-PC? Neuer Versuch in 8 Sekunden … (' + tries + ')';
           setTimeout(function () {
             spinner.style.display = 'block';
             go();
-          }, 5000);
+          }, 8000);
         });
     }
     go();
