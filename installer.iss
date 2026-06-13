@@ -36,32 +36,19 @@ Name: "german";  MessagesFile: "compiler:Languages\German.isl"
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [CustomMessages]
-german.InstallingDeps=Flask & PyWebView werden installiert ...
-english.InstallingDeps=Installing Flask & PyWebView ...
-german.GeneratingIcon=Icon wird erstellt ...
-english.GeneratingIcon=Generating icon ...
+german.InstallingDeps=PyWebView wird installiert ...
+english.InstallingDeps=Installing PyWebView ...
 
 [Tasks]
 Name: desktopicon; Description: "Verknüpfung auf dem Desktop erstellen"; \
   GroupDescription: "{cm:AdditionalIcons}"
 
 [Files]
+; Nur der Client — der Server ist ein eigenes Programm auf dem Haupt-PC
 ; App launcher (tiny exe, no console window)
 Source: "dist\Studforge.exe"; DestDir: "{app}"; Flags: ignoreversion
-
-; Python scripts
-Source: "app.py";    DestDir: "{app}"; Flags: ignoreversion
 Source: "main.py";   DestDir: "{app}"; Flags: ignoreversion
-Source: "icon.py";   DestDir: "{app}"; Flags: ignoreversion
 Source: "icon.ico";  DestDir: "{app}"; Flags: ignoreversion
-
-; HTML templates
-Source: "templates\*"; DestDir: "{app}\templates"; \
-  Flags: ignoreversion recursesubdirs createallsubdirs
-
-; CSS / JS / assets
-Source: "static\*"; DestDir: "{app}\static"; \
-  Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 ; Start Menu
@@ -186,13 +173,8 @@ begin
 
   App := ExpandConstant('{app}');
 
-  { Install Flask & PyWebView }
+  { Install PyWebView (Client braucht kein Flask — der Server rendert alles) }
   WizardForm.StatusLabel.Caption := CustomMessage('InstallingDeps');
-  Exec(PythonPath, '-m pip install flask pywebview --quiet',
-    App, SW_HIDE, ewWaitUntilTerminated, Code);
-
-  { Generate app icon }
-  WizardForm.StatusLabel.Caption := CustomMessage('GeneratingIcon');
-  Exec(PythonPath, '"' + App + '\icon.py"',
+  Exec(PythonPath, '-m pip install pywebview --quiet',
     App, SW_HIDE, ewWaitUntilTerminated, Code);
 end;

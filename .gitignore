@@ -10,6 +10,9 @@ config.json
 cloudflared.exe
 server.log
 
+# Server-Schlüssel — existiert NUR auf dem Haupt-PC, niemals committen!
+server.key
+
 # Python
 __pycache__/
 *.py[cod]
