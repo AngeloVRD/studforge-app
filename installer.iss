@@ -70,7 +70,7 @@ Name: "{group}\{#AppName}";                     Filename: "{app}\Studforge.exe";
 Name: "{group}\{cm:UninstallProgram,{#AppName}}"; Filename: "{uninstallexe}"
 
 ; Desktop shortcut (optional)
-Name: "{commondesktop}\{#AppName}"; Filename: "{app}\Studforge.exe"; \
+Name: "{userdesktop}\{#AppName}"; Filename: "{app}\Studforge.exe"; \
   Comment: "Studforge 3D Manufaktur"; Tasks: desktopicon
 
 [Run]
