@@ -75,6 +75,29 @@ def discover_server(cfg):
     return None
 
 
+def fetch_published_url():
+    """Nur die auf GitHub veröffentlichte Adresse holen (ohne Prüfung)."""
+    try:
+        req = urllib.request.Request(
+            RAW_URL + f'?t={int(time.time())}',
+            headers={'Cache-Control': 'no-cache'})
+        with urllib.request.urlopen(req, timeout=6) as r:
+            url = r.read().decode('utf-8').strip()
+        return url if url.startswith('http') else None
+    except Exception:
+        return None
+
+
+def discover_server_retry(cfg, attempts=5, delay=3):
+    """Mehrere Versuche — überbrückt die Phase, in der der Server gerade neu startet."""
+    for i in range(attempts):
+        url = discover_server(cfg)
+        if url:
+            return url
+        time.sleep(delay)
+    return None
+
+
 # ── Dialog: Server nicht erreichbar (dunkles Design) ─────────────────────────
 
 BG, BG2, BORDER = '#0a0a0a', '#161616', '#2a2a2a'
@@ -147,6 +170,67 @@ def manual_url_dialog(cfg):
     return result['url']
 
 
+# ── Selbstheilender Watchdog ─────────────────────────────────────────────────
+# Läuft im Hintergrund, solange das Fenster offen ist. Erkennt, wenn die
+# Server-Adresse tot ist (Server neu gestartet → neue Cloudflare-Adresse) und
+# lädt das Fenster automatisch auf die neue Adresse — ohne Zutun des Nutzers.
+
+def make_watchdog(window, cfg, initial_url):
+    state = {'url': initial_url}
+
+    def is_local(u):
+        return u.startswith('http://127.0.0.1') or u.startswith('http://localhost')
+
+    def watchdog():
+        time.sleep(8)                       # Seite erst mal laden lassen
+        miss = 0
+        while True:
+            time.sleep(6)
+            current = state['url']
+
+            # Haupt-PC bleibt immer lokal — nichts umzuschalten
+            if is_local(current) and studforge_at(LOCAL_URL, timeout=2):
+                continue
+
+            if studforge_at(current, timeout=6):
+                miss = 0
+                # Läuft noch — aber hat GitHub schon eine NEUERE Adresse?
+                pub = fetch_published_url()
+                if pub and pub != current and studforge_at(pub, timeout=6):
+                    state['url'] = pub
+                    cfg['last_url'] = pub
+                    save_config(cfg)
+                    try: window.load_url(pub)
+                    except Exception: pass
+                continue
+
+            # Adresse antwortet nicht
+            miss += 1
+            if miss < 2:
+                continue                    # kurzer Aussetzer → noch nicht reagieren
+
+            # Neue Adresse suchen (mehrere Versuche, Server startet evtl. gerade neu)
+            new = None
+            for _ in range(20):             # bis ~2 Min lang versuchen
+                # Haupt-PC: zuerst wieder lokal probieren
+                if studforge_at(LOCAL_URL, timeout=2):
+                    new = LOCAL_URL
+                    break
+                cand = discover_server(cfg)
+                if cand and cand != current:
+                    new = cand
+                    break
+                time.sleep(6)
+
+            if new:
+                state['url'] = new
+                miss = 0
+                try: window.load_url(new)
+                except Exception: pass
+
+    return watchdog
+
+
 # ── Start ────────────────────────────────────────────────────────────────────
 
 if __name__ == '__main__':
@@ -156,7 +240,7 @@ if __name__ == '__main__':
     if studforge_at(LOCAL_URL, timeout=1.0):
         url = LOCAL_URL
     else:
-        url = discover_server(cfg)
+        url = discover_server_retry(cfg)    # mehrere Versuche statt sofort aufgeben
         if not url:
             url = manual_url_dialog(cfg)
         if not url:
@@ -164,7 +248,7 @@ if __name__ == '__main__':
 
     import webview
 
-    webview.create_window(
+    window = webview.create_window(
         title='Studforge — 3D Manufaktur',
         url=url,
         width=1320,
@@ -175,4 +259,6 @@ if __name__ == '__main__':
         confirm_close=False,
     )
     # private_mode=False: Login-Cookies bleiben gespeichert
-    webview.start(private_mode=False, debug=False)
+    # Watchdog wird gestartet, sobald die GUI läuft, und hält die Verbindung selbstständig aufrecht
+    webview.start(make_watchdog(window, cfg, url),
+                  private_mode=False, debug=False)

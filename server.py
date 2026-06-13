@@ -129,11 +129,22 @@ def publish_url(url):
         log(f'Veröffentlichen fehlgeschlagen: {e}')
 
 
+def public_reachable(url, timeout=10):
+    """Antwortet die ÖFFENTLICHE Adresse wirklich (von aussen geroutet)?"""
+    try:
+        urllib.request.urlopen(url.rstrip('/') + '/api/version', timeout=timeout)
+        return True
+    except urllib.error.HTTPError:
+        return True          # 401 etc. = Server antwortet, Tunnel lebt
+    except Exception:
+        return False
+
+
 def tunnel_loop():
     if not ensure_cloudflared():
         return
     url_re = re.compile(r'https://[a-z0-9-]+\.trycloudflare\.com')
-    last_published = None
+    state = {'url': None}
 
     while True:
         log('Tunnel wird gestartet ...')
@@ -150,19 +161,44 @@ def tunnel_loop():
             time.sleep(30)
             continue
 
-        for line in proc.stdout:
-            m = url_re.search(line)
-            if m and m.group(0) != last_published:
-                last_published = m.group(0)
-                log(f'Öffentliche Adresse: {last_published}')
-                try:
-                    publish_url(last_published)
-                except Exception as e:
-                    log(f'Publish-Fehler (Tunnel läuft weiter): {e}')
+        state['url'] = None
 
-        proc.wait()
-        log(f'Tunnel beendet (Code {proc.returncode}) — Neustart in 5s ...')
-        time.sleep(5)
+        # Adresse aus der Tunnel-Ausgabe lesen & veröffentlichen (eigener Thread,
+        # damit der Health-Check unten parallel laufen kann)
+        def read_output():
+            for line in proc.stdout:
+                m = url_re.search(line)
+                if m and m.group(0) != state['url']:
+                    state['url'] = m.group(0)
+                    log(f'Öffentliche Adresse: {state["url"]}')
+                    try:
+                        publish_url(state['url'])
+                    except Exception as e:
+                        log(f'Publish-Fehler (Tunnel läuft weiter): {e}')
+        threading.Thread(target=read_output, daemon=True).start()
+
+        # Health-Check: erkennt auch einen STILL gestorbenen Tunnel
+        # (Prozess lebt, routet aber nichts mehr) und erzwingt Neustart.
+        strikes = 0
+        while proc.poll() is None:
+            time.sleep(15)
+            if not state['url']:
+                continue                      # Adresse noch nicht da → warten
+            if public_reachable(state['url']):
+                strikes = 0
+            else:
+                strikes += 1
+                log(f'Tunnel antwortet nicht ({strikes}/3): {state["url"]}')
+                if strikes >= 3:
+                    log('Tunnel ist tot — wird neu gestartet (neue Adresse folgt).')
+                    break
+
+        try:
+            proc.kill()
+        except Exception:
+            pass
+        log('Tunnel wird neu aufgebaut in 4s ...')
+        time.sleep(4)
 
 
 # ── Start ────────────────────────────────────────────────────────────────────
