@@ -70,6 +70,7 @@ Filename: "{app}\Studforge.exe"; \
 [Code]
 var
   PythonPath: String;
+  NeedPython: Boolean;
 
 { Find python.exe in common locations }
 function FindPython(): String;
@@ -97,70 +98,72 @@ begin
   Result := '';
 end;
 
-{ Download and silently install Python 3.11 }
-function InstallPython(): Boolean;
-var
-  Tmp:  String;
-  Code: Integer;
-begin
-  Result := False;
-  Tmp    := ExpandConstant('{tmp}\python-3.11.9-amd64.exe');
-
-  WizardForm.StatusLabel.Caption := 'Python 3.11 wird heruntergeladen ...';
-
-  if not Exec('powershell.exe',
-    '-NoProfile -ExecutionPolicy Bypass -Command ' +
-    '"Invoke-WebRequest -Uri ' +
-    '''https://www.python.org/ftp/python/3.11.9/python-3.11.9-amd64.exe''' +
-    ' -OutFile ''' + Tmp + ''' -UseBasicParsing"',
-    '', SW_HIDE, ewWaitUntilTerminated, Code) then Exit;
-
-  if not FileExists(Tmp) then Exit;
-
-  WizardForm.StatusLabel.Caption := 'Python 3.11 wird installiert ...';
-
-  Exec(Tmp, '/quiet InstallAllUsers=0 PrependPath=1 Include_pip=1',
-    '', SW_HIDE, ewWaitUntilTerminated, Code);
-
-  DeleteFile(Tmp);
-  Result := (Code = 0);
-end;
-
-{ Called before the wizard appears }
+{ Called before the wizard appears — hier nur PRUEFEN, nicht installieren!
+  WizardForm existiert hier noch NICHT, darf also nicht angefasst werden. }
 function InitializeSetup(): Boolean;
 var
   Answer: Integer;
 begin
+  Result := True;
   PythonPath := FindPython();
-  if PythonPath <> '' then begin
-    Result := True;
-    Exit;
-  end;
+  NeedPython := (PythonPath = '');
+  if not NeedPython then Exit;
 
   Answer := MsgBox(
     'Python 3.11 ist nicht installiert.' + #13#10 + #13#10 +
-    'Soll Python jetzt automatisch heruntergeladen werden?' + #13#10 +
+    'Soll Python jetzt automatisch mitinstalliert werden?' + #13#10 +
     '(ca. 25 MB, Internetverbindung erforderlich)',
     mbConfirmation, MB_YESNO);
 
-  if Answer = IDYES then begin
-    if InstallPython() then begin
-      PythonPath := FindPython();
-      if PythonPath <> '' then begin
-        Result := True;
-        Exit;
-      end;
-    end;
-    MsgBox('Python Installation fehlgeschlagen.' + #13#10 +
-           'Bitte manuell installieren: python.org/downloads',
-           mbError, MB_OK);
-  end else begin
-    MsgBox('Python 3.11 wird benötigt.' + #13#10 +
+  if Answer <> IDYES then begin
+    MsgBox('Python 3.11 wird benötigt — Installation abgebrochen.' + #13#10 +
            'Download: python.org/downloads',
            mbInformation, MB_OK);
+    Result := False;
+  end;
+  { Bei JA: NeedPython bleibt True, der Download passiert in PrepareToInstall }
+end;
+
+{ Läuft NACH dem Klick auf "Installieren" — hier existiert WizardForm.
+  Ein nicht-leerer Rückgabewert bricht sauber mit Meldung ab (kein Absturz). }
+function PrepareToInstall(var NeedsRestart: Boolean): String;
+var
+  Tmp:  String;
+  Code: Integer;
+begin
+  Result := '';
+  if not NeedPython then Exit;
+
+  WizardForm.StatusLabel.Caption := 'Python 3.11 wird heruntergeladen ...';
+  Tmp := ExpandConstant('{tmp}\python-3.11.9-amd64.exe');
+
+  if not Exec('powershell.exe',
+      '-NoProfile -ExecutionPolicy Bypass -Command ' +
+      '"Invoke-WebRequest -Uri ' +
+      '''https://www.python.org/ftp/python/3.11.9/python-3.11.9-amd64.exe''' +
+      ' -OutFile ''' + Tmp + ''' -UseBasicParsing"',
+      '', SW_HIDE, ewWaitUntilTerminated, Code) then
+  begin
+    Result := 'Python konnte nicht heruntergeladen werden.' + #13#10 +
+              'Bitte Internetverbindung prüfen und Setup erneut starten.';
+    Exit;
   end;
 
-  Result := False;
+  if not FileExists(Tmp) then
+  begin
+    Result := 'Python-Download fehlgeschlagen. Bitte erneut versuchen.';
+    Exit;
+  end;
+
+  WizardForm.StatusLabel.Caption := 'Python wird installiert (kann 1-2 Minuten dauern) ...';
+  Exec(Tmp, '/quiet InstallAllUsers=0 PrependPath=1 Include_pip=1',
+       '', SW_HIDE, ewWaitUntilTerminated, Code);
+  DeleteFile(Tmp);
+
+  PythonPath := FindPython();
+  if PythonPath = '' then
+    Result := 'Python wurde installiert, aber nicht gefunden.' + #13#10 +
+              'Bitte den PC neu starten und Setup erneut ausführen.';
 end;
 
 { Called after all files are copied }
@@ -170,6 +173,9 @@ var
   App:  String;
 begin
   if CurStep <> ssPostInstall then Exit;
+
+  if PythonPath = '' then PythonPath := FindPython();
+  if PythonPath = '' then Exit;
 
   App := ExpandConstant('{app}');
 
