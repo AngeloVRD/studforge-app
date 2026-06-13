@@ -43,7 +43,7 @@ english.GeneratingIcon=Generating icon ...
 
 [Tasks]
 Name: desktopicon; Description: "Verknüpfung auf dem Desktop erstellen"; \
-  GroupDescription: "{cm:AdditionalIcons}"; Flags: checkedonce
+  GroupDescription: "{cm:AdditionalIcons}"
 
 [Files]
 ; App launcher (tiny exe, no console window)
@@ -69,9 +69,9 @@ Name: "{group}\{#AppName}";                     Filename: "{app}\Studforge.exe";
   Comment: "Studforge 3D Manufaktur"
 Name: "{group}\{cm:UninstallProgram,{#AppName}}"; Filename: "{uninstallexe}"
 
-; Desktop shortcut (optional)
+; Desktop shortcut
 Name: "{userdesktop}\{#AppName}"; Filename: "{app}\Studforge.exe"; \
-  Comment: "Studforge 3D Manufaktur"; Tasks: desktopicon
+  IconFilename: "{app}\icon.ico"; Comment: "Studforge 3D Manufaktur"; Tasks: desktopicon
 
 [Run]
 ; Offer to launch after install
