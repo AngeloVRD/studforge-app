@@ -275,8 +275,17 @@ def first_run_dialog():
             el.bind('<Leave>', lambda e: f.config(highlightbackground=BORDER))
 
     def choose_server():
-        result.update({'mode': 'server', 'password': 'studforge'})
-        root.destroy()
+        from tkinter import messagebox
+        ok = messagebox.askyesno(
+            'Studforge — Wirklich der Server?',
+            'Es darf nur EINEN Server geben — den Haupt-PC im Geschäft!\n\n'
+            'Auf einem Server-PC werden alle Daten gespeichert. '
+            'Mitarbeiter wählen stattdessen „Als Mitarbeiter verbinden".\n\n'
+            'Ist DIESER PC wirklich der Haupt-PC?',
+            icon='warning', parent=root)
+        if ok:
+            result.update({'mode': 'server', 'password': 'studforge'})
+            root.destroy()
 
     def choose_client():
         result.update({'mode': 'client'})
