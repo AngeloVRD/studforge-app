@@ -1105,3 +1105,40 @@ input, select, textarea {
 
 /* Topbar blur on scroll (handled via JS class) */
 .topbar.scrolled { border-bottom-color: rgba(34,34,34,.6); }
+
+/* ══════════════════════════════════════════════════════
+   LOGOUT (Sidebar-Footer)
+   ══════════════════════════════════════════════════════ */
+
+.logout-form { margin-top: 10px; }
+
+.logout-btn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 7px 10px;
+  color: var(--text-3);
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    color .14s,
+    border-color .14s,
+    background .14s,
+    transform .2s cubic-bezier(.34,1.56,.64,1);
+}
+
+.logout-btn:hover {
+  color: var(--bad);
+  border-color: rgba(239,68,68,.35);
+  background: rgba(239,68,68,.06);
+  transform: translateY(-1px);
+}
+
+.logout-btn:active { transform: scale(.97); }
+.logout-btn i { font-size: 11px; }

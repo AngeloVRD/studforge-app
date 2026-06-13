@@ -251,3 +251,48 @@ if (topbar) {
     topbar.classList.toggle('scrolled', window.scrollY > 8);
   }, { passive: true });
 }
+
+// ══════════════════════════════════════════════════════
+// 10. Live-Sync — alle Clients sehen Änderungen sofort
+// ══════════════════════════════════════════════════════
+
+(function liveSync() {
+  // Login-Seite hat kein .content — dort nicht pollen
+  if (!document.querySelector('.content')) return;
+
+  let baseVersion = null;
+  let formDirty   = false;
+
+  // Sobald jemand in ein Formular tippt: nicht neu laden (Eingaben schützen)
+  document.addEventListener('input', e => {
+    if (e.target.closest('form')) formDirty = true;
+  }, true);
+
+  function typingNow() {
+    const el = document.activeElement;
+    return el && ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName);
+  }
+
+  async function check() {
+    try {
+      const r = await fetch('/api/version', { cache: 'no-store' });
+      if (r.status === 401) { location.reload(); return; }   // Session abgelaufen → Login zeigen
+      if (!r.ok) return;
+      const j = await r.json();
+      if (baseVersion === null) { baseVersion = j.v; return; }
+      if (j.v !== baseVersion && !formDirty && !typingNow()) {
+        // Daten haben sich geändert (anderer Benutzer) → sanft neu laden
+        loadBar.start();
+        const c = getContent();
+        if (c) {
+          c.style.transition = 'opacity .15s ease';
+          c.style.opacity = '.45';
+        }
+        setTimeout(() => location.reload(), 130);
+      }
+    } catch (_) { /* Server kurz nicht erreichbar — einfach weiter versuchen */ }
+  }
+
+  check();
+  setInterval(check, 2500);
+})();

@@ -65,6 +65,12 @@
       <span class="status-dot"></span>
       System aktiv
     </div>
+    <form method="post" action="{{ url_for('logout') }}" class="logout-form">
+      <button type="submit" class="logout-btn" title="Abmelden">
+        <i class="fa-solid fa-right-from-bracket"></i>
+        Abmelden
+      </button>
+    </form>
   </div>
 </aside>
 

@@ -1,5 +1,14 @@
 # Datenbank (wird lokal generiert)
 studforge.db
+studforge.db-wal
+studforge.db-shm
+
+# Pro-PC Konfiguration (Server/Client + Passwort) — nie committen!
+config.json
+
+# Server-Werkzeuge & Logs
+cloudflared.exe
+server.log
 
 # Python
 __pycache__/

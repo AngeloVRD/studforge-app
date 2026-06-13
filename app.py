@@ -1,12 +1,30 @@
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
 import sqlite3
 import threading
+import time
+import json
+import os
 import webbrowser
-from datetime import datetime
+from datetime import datetime, timedelta
 
 app = Flask(__name__)
 app.secret_key = 'studforge-sk-2024-xK9mP2qR'
+app.permanent_session_lifetime = timedelta(days=90)
 DATABASE = 'studforge.db'
+
+# Daten-Version: Clients fragen /api/version ab und laden bei Änderung neu.
+# Start mit Zeitstempel, damit nach Server-Neustart alle Clients einmal neu laden.
+DATA_VERSION = {'v': int(time.time())}
+
+
+def get_app_password():
+    """Passwort aus config.json neben app.py — Fallback: 'studforge'."""
+    cfg_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'config.json')
+    try:
+        with open(cfg_path, encoding='utf-8') as f:
+            return json.load(f).get('password', 'studforge')
+    except Exception:
+        return 'studforge'
 
 STATUSES = {
     'anfrage':    {'label': 'Anfrage',    'css': 'anfrage'},
@@ -34,11 +52,15 @@ CATEGORIES = [
 def get_db():
     conn = sqlite3.connect(DATABASE)
     conn.row_factory = sqlite3.Row
+    # Mehrere gleichzeitige Zugriffe (mehrere Clients) sauber abfangen
+    conn.execute('PRAGMA busy_timeout = 5000')
     return conn
 
 
 def init_db():
     db = get_db()
+    # WAL-Modus: Lesen und Schreiben gleichzeitig möglich (wichtig im Netzwerkbetrieb)
+    db.execute('PRAGMA journal_mode = WAL')
     db.executescript('''
         CREATE TABLE IF NOT EXISTS customers (
             id        INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -102,6 +124,56 @@ def next_order_number():
 @app.context_processor
 def inject_globals():
     return dict(STATUSES=STATUSES, MATERIALS=MATERIALS, CATEGORIES=CATEGORIES, now=datetime.now())
+
+
+# ── Login ──────────────────────────────────────────────────────────────────────
+# Die App ist übers Internet erreichbar — ohne Anmeldung kein Zugriff.
+
+@app.before_request
+def require_login():
+    if session.get('auth'):
+        return
+    if request.endpoint in ('login', 'static', None):
+        return
+    if request.path == '/api/version':
+        return jsonify({'error': 'auth'}), 401
+    return redirect(url_for('login'))
+
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if session.get('auth'):
+        return redirect(url_for('dashboard'))
+    error = None
+    if request.method == 'POST':
+        if request.form.get('password', '') == get_app_password():
+            session.permanent = True
+            session['auth'] = True
+            return redirect(url_for('dashboard'))
+        error = 'Falsches Passwort.'
+    return render_template('login.html', error=error)
+
+
+@app.route('/logout', methods=['POST'])
+def logout():
+    session.clear()
+    return redirect(url_for('login'))
+
+
+# ── Live-Sync ──────────────────────────────────────────────────────────────────
+# Alle Schreibzugriffe laufen über POST — danach Version erhöhen,
+# damit alle verbundenen Clients die Änderung sofort sehen.
+
+@app.after_request
+def bump_data_version(response):
+    if request.method == 'POST' and request.endpoint not in ('login', 'logout'):
+        DATA_VERSION['v'] += 1
+    return response
+
+
+@app.route('/api/version')
+def api_version():
+    return {'v': DATA_VERSION['v']}
 
 
 # ── Dashboard ──────────────────────────────────────────────────────────────────
